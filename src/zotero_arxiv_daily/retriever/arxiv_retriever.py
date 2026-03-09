@@ -18,23 +18,39 @@ class ArxivRetriever(BaseRetriever):
     def _retrieve_raw_papers(self) -> list[ArxivResult]:
         client = arxiv.Client(num_retries=10,delay_seconds=10)
         query = '+'.join(self.config.source.arxiv.category)
+        logger.info(
+            f"arxiv: fetching RSS feed for categories={self.config.source.arxiv.category} "
+            f"(query={query})"
+        )
         # Get the latest paper from arxiv rss feed
         feed = feedparser.parse(f"https://rss.arxiv.org/atom/{query}")
         if 'Feed error for query' in feed.feed.title:
             raise Exception(f"Invalid ARXIV_QUERY: {query}.")
         raw_papers = []
         all_paper_ids = [i.id.removeprefix("oai:arXiv.org:") for i in feed.entries if i.get("arxiv_announce_type","new") == 'new']
+        logger.info(f"arxiv: found {len(all_paper_ids)} new paper ids from RSS feed")
         if self.config.executor.debug:
             all_paper_ids = all_paper_ids[:10]
+            logger.info("arxiv: debug mode enabled, limiting RSS paper ids to 10")
 
         # Get full information of each paper from arxiv api
+        total_batches = (len(all_paper_ids) + 19) // 20
         bar = tqdm(total=len(all_paper_ids))
-        for i in range(0,len(all_paper_ids),20):
-            search = arxiv.Search(id_list=all_paper_ids[i:i+20])
+        for batch_index, i in enumerate(range(0,len(all_paper_ids),20), start=1):
+            batch_ids = all_paper_ids[i:i+20]
+            logger.info(
+                f"arxiv: retrieving batch {batch_index}/{total_batches} "
+                f"({len(batch_ids)} papers) from API"
+            )
+            search = arxiv.Search(id_list=batch_ids)
             batch = list(client.results(search))
             bar.update(len(batch))
             raw_papers.extend(batch)
+            logger.info(
+                f"arxiv: retrieved {len(raw_papers)}/{len(all_paper_ids)} papers from API so far"
+            )
         bar.close()
+        logger.info(f"arxiv: raw paper retrieval finished with {len(raw_papers)} papers")
 
         return raw_papers
 
