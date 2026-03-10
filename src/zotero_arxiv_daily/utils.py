@@ -9,6 +9,25 @@ from loguru import logger
 import datetime
 from omegaconf import DictConfig
 
+
+def _suppress_onnxruntime_warnings() -> None:
+    try:
+        import onnxruntime as ort
+    except ModuleNotFoundError:
+        return
+    except Exception as exc:
+        logger.debug(f"Failed to import onnxruntime for log suppression: {exc}")
+        return
+
+    try:
+        # ORT may emit noisy hardware discovery warnings in virtualized environments.
+        ort.set_default_logger_severity(3)
+    except Exception as exc:
+        logger.debug(f"Failed to suppress onnxruntime warnings: {exc}")
+
+
+_suppress_onnxruntime_warnings()
+
 try:
     import pymupdf.layout as pymupdf_layout
     import pymupdf4llm
