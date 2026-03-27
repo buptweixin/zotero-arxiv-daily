@@ -2,6 +2,29 @@ import pytest
 import pickle
 from openai import OpenAI
 from zotero_arxiv_daily.protocol import Paper
+
+
+class DummyCompletions:
+    def __init__(self):
+        self.calls = []
+
+    def create(self, **kwargs):
+        self.calls.append(kwargs)
+        message = type("Message", (), {"content": "中文 TLDR"})()
+        choice = type("Choice", (), {"message": message})()
+        return type("Response", (), {"choices": [choice]})()
+
+
+class DummyChat:
+    def __init__(self):
+        self.completions = DummyCompletions()
+
+
+class DummyOpenAI:
+    def __init__(self):
+        self.chat = DummyChat()
+
+
 @pytest.fixture
 def paper() -> Paper:
     full_text = r"""
@@ -63,3 +86,12 @@ def test_affiliations(config,paper:Paper):
     openai_client = OpenAI(api_key=config.llm.api.key, base_url=config.llm.api.base_url)
     paper.generate_affiliations(openai_client, config.llm)
     assert paper.affiliations is not None
+
+
+def test_tldr_uses_chinese_language_prompt(config, paper: Paper):
+    openai_client = DummyOpenAI()
+    paper.generate_tldr(openai_client, config.llm)
+    request = openai_client.chat.completions.calls[0]
+    assert "Chinese" in request["messages"][0]["content"]
+    assert "Chinese" in request["messages"][1]["content"]
+    assert paper.tldr == "中文 TLDR"

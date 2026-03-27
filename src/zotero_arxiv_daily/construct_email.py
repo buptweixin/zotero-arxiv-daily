@@ -52,7 +52,20 @@ def get_empty_html():
   """
   return block_template
 
-def get_block_html(title:str, authors:str, rate:str, tldr:str, pdf_url:str, affiliations:str=None):
+def get_related_papers_html(related_papers:list[str] | None):
+    if not related_papers:
+        return "未找到相关的 Zotero 论文。"
+    items = ''.join(
+        f'<li style="margin-bottom: 4px;">{title}</li>' for title in related_papers
+    )
+    return (
+        '<ol style="margin: 8px 0 0 20px; padding: 0;">'
+        f'{items}'
+        '</ol>'
+    )
+
+
+def get_block_html(title:str, authors:str, rate:str, tldr:str, pdf_url:str, affiliations:str=None, related_papers:list[str] | None=None):
     block_template = """
     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-family: Arial, sans-serif; border: 1px solid #ddd; border-radius: 8px; padding: 16px; background-color: #f9f9f9;">
     <tr>
@@ -77,6 +90,12 @@ def get_block_html(title:str, authors:str, rate:str, tldr:str, pdf_url:str, affi
             <strong>TLDR:</strong> {tldr}
         </td>
     </tr>
+    <tr>
+        <td style="font-size: 14px; color: #333; padding: 8px 0;">
+            <strong>最相关的 3 篇 Zotero 论文：</strong>
+            {related_papers_html}
+        </td>
+    </tr>
 
     <tr>
         <td style="padding: 8px 0;">
@@ -85,7 +104,15 @@ def get_block_html(title:str, authors:str, rate:str, tldr:str, pdf_url:str, affi
     </tr>
 </table>
 """
-    return block_template.format(title=title, authors=authors,rate=rate, tldr=tldr, pdf_url=pdf_url, affiliations=affiliations)
+    return block_template.format(
+        title=title,
+        authors=authors,
+        rate=rate,
+        tldr=tldr,
+        pdf_url=pdf_url,
+        affiliations=affiliations,
+        related_papers_html=get_related_papers_html(related_papers),
+    )
 
 def get_stars(score:float):
     full_star = '<span class="full-star">⭐</span>'
@@ -125,7 +152,7 @@ def render_email(papers:list[Paper]) -> str:
                 affiliations += ', ...'
         else:
             affiliations = 'Unknown Affiliation'
-        parts.append(get_block_html(p.title, authors, rate, p.tldr, p.pdf_url, affiliations))
+        parts.append(get_block_html(p.title, authors, rate, p.tldr, p.pdf_url, affiliations, p.related_papers))
 
     content = '<br>' + '</br><br>'.join(parts) + '</br>'
     return framework.replace('__CONTENT__', content)

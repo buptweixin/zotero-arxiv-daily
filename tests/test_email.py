@@ -15,13 +15,16 @@ def papers() -> list[Paper]:
         full_text="Test Full Text",
         tldr="Test TLDR",
         affiliations=["Test Affiliation","Test Affiliation 2"],
-        score=0.5
+        score=0.5,
+        related_papers=["Related Paper 1", "Related Paper 2", "Related Paper 3"],
     )
     return [paper]*10
 
 def test_render_email(papers:list[Paper]):
     email_content = render_email(papers)
     assert email_content is not None
+    assert "最相关的 3 篇 Zotero 论文" in email_content
+    assert "Related Paper 1" in email_content
 
 def test_send_email(config,papers:list[Paper]):
     send_email(config, render_email(papers))

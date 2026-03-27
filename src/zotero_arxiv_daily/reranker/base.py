@@ -3,6 +3,11 @@ from omegaconf import DictConfig
 from ..protocol import Paper, CorpusPaper
 import numpy as np
 from typing import Type
+
+
+RELATED_PAPER_COUNT = 3
+
+
 class BaseReranker(ABC):
     def __init__(self, config:DictConfig):
         self.config = config
@@ -14,8 +19,14 @@ class BaseReranker(ABC):
         sim = self.get_similarity_score([c.abstract for c in candidates], [c.abstract for c in corpus])
         assert sim.shape == (len(candidates), len(corpus))
         scores = (sim * time_decay_weight).sum(axis=1) * 10 # [n_candidate]
-        for s,c in zip(scores,candidates):
+        related_paper_count = min(RELATED_PAPER_COUNT, len(corpus))
+        for idx, (s, c) in enumerate(zip(scores,candidates)):
             c.score = s
+            if related_paper_count > 0:
+                top_indices = np.argsort(sim[idx])[::-1][:related_paper_count]
+                c.related_papers = [corpus[i].title for i in top_indices]
+            else:
+                c.related_papers = []
         candidates = sorted(candidates,key=lambda x: x.score,reverse=True)
         return candidates
     

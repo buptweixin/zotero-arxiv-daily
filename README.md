@@ -91,6 +91,7 @@ llm:
     base_url: ${oc.env:OPENAI_API_BASE}
   generation_kwargs:
     model: gpt-4o-mini
+  language: Chinese
 
 source:
   arxiv:
@@ -133,7 +134,7 @@ llm:
   # Arguments for the LLM API. See [here](https://platform.openai.com/docs/api-reference/chat/create) for more details.
     max_tokens: 16384
     model: ???
-  language: English # Preferred language for the TL;DR. Example: English
+  language: Chinese # Preferred language for the TL;DR. Example: Chinese
 
 reranker:
   local:
